@@ -1,4 +1,5 @@
 import { prisma } from '../server/src/lib/prisma'
+import { redactConnectionStrings } from '../server/src/lib/postgres-url'
 
 async function main() {
   await prisma.companySettings.upsert({
@@ -16,8 +17,9 @@ async function main() {
 
 main()
   .catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : error)
-    process.exitCode = 1
+    const message = error instanceof Error ? error.message : String(error)
+  console.error(redactConnectionStrings(message))
+  process.exitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect()

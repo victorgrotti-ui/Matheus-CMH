@@ -1,6 +1,7 @@
 import { execFileSync } from 'child_process'
 import path from 'path'
 import { isPostgresUrl } from '../lib/database-file'
+import { redactConnectionStrings } from '../lib/postgres-url'
 import { officeDatabaseCommands } from '../lib/office-setup'
 import { prisma } from '../lib/prisma'
 
@@ -49,7 +50,8 @@ async function main() {
 
 main()
   .catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : error)
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(redactConnectionStrings(message))
     process.exitCode = 1
   })
   .finally(async () => {

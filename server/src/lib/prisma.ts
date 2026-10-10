@@ -1,7 +1,10 @@
-import path from 'path'
-import dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+import { connectionUrlForClient, loadConnectionEnv } from './postgres-url'
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+loadConnectionEnv(__dirname)
+const datasourceUrl = connectionUrlForClient()
 
-export const prisma = new PrismaClient()
+export const prisma = new PrismaClient({
+  datasourceUrl,
+  errorFormat: 'minimal',
+})
