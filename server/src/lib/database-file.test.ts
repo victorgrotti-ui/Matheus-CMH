@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { isDevelopmentDatabaseFile, isPostgresUrl } from './database-file'
-import { connectionUrlForClient, normalizePostgresUrl, redactConnectionStrings } from './postgres-url'
+import { postgresTargetForClient, postgresTargetFromUrl, redactConnectionStrings, safePostgresUrl } from './postgres-url'
 
 describe('database file', () => {
   it('recognises the development database and not the office database', () => {
@@ -20,27 +20,33 @@ describe('database file', () => {
 
 describe('postgres connection string', () => {
   it('keeps a password character out of the host', () => {
-    const normalized = normalizePostgresUrl(
+    const target = postgresTargetFromUrl(
       'postgresql://postgres.example:p@ss#word@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
       'DATABASE_URL',
     )
-    assert.equal(
-      normalized,
-      'postgresql://postgres.example:p%40ss%23word@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
-    )
+    assert.equal(target.user, 'postgres.example')
+    assert.equal(target.password, 'p@ss#word')
+    assert.equal(target.host, 'aws-0-eu-west-1.pooler.supabase.com')
+    assert.equal(target.port, 6543)
+    assert.equal(target.database, 'postgres')
+    const safe = safePostgresUrl(target)
+    assert.equal(safe.includes('p@ss'), false)
+    assert.equal(safe.includes('#'), false)
+    assert.match(safe, /aws-0-eu-west-1\.pooler\.supabase\.com:6543\/postgres/)
   })
 
-  it('does not encode a password twice', () => {
-    const normalized = normalizePostgresUrl(
+  it('decodes a password that is already encoded', () => {
+    const target = postgresTargetFromUrl(
       'postgresql://postgres.example:p%40ss@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
       'DIRECT_URL',
     )
-    assert.equal(normalized, 'postgresql://postgres.example:p%40ss@aws-0-eu-west-1.pooler.supabase.com:5432/postgres')
+    assert.equal(target.password, 'p@ss')
+    assert.equal(target.host, 'aws-0-eu-west-1.pooler.supabase.com')
   })
 
   it('rejects a placeholder host without returning the password', () => {
     assert.throws(
-      () => normalizePostgresUrl(
+      () => postgresTargetFromUrl(
         'postgresql://postgres.example:super-secret-value@aws-0-[region].pooler.supabase.com:6543/postgres',
         'DATABASE_URL',
       ),
@@ -58,10 +64,11 @@ describe('postgres connection string', () => {
       DATABASE_URL: 'postgresql://postgres.example:super-secret-value@aws-0-[region].pooler.supabase.com:6543/postgres',
       DIRECT_URL: 'postgresql://postgres.example:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
     }
-    const chosen = connectionUrlForClient(env)
-    assert.equal(chosen, 'postgresql://postgres.example:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres')
-    assert.equal(env.DATABASE_URL, chosen)
-    assert.equal(String(env.DATABASE_URL).includes('super-secret-value'), false)
+    const chosen = postgresTargetForClient(env)
+    assert.equal(chosen.host, 'aws-0-eu-west-1.pooler.supabase.com')
+    assert.equal(chosen.port, 5432)
+    assert.equal(chosen.password, 'secret')
+    assert.equal(safePostgresUrl(chosen).includes('super-secret-value'), false)
   })
 
   it('removes a connection string from a log message', () => {

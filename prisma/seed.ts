@@ -18,8 +18,8 @@ async function main() {
 main()
   .catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)
-  console.error(redactConnectionStrings(message))
-  process.exitCode = 1
+    console.error(redactConnectionStrings(message))
+    process.exitCode = 1
   })
   .finally(async () => {
     await prisma.$disconnect()
