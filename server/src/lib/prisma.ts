@@ -1,5 +1,8 @@
+import { createRequire } from 'node:module'
 import { PrismaClient } from '@prisma/client'
 import { loadConnectionEnv, postgresTargetForClient, safePostgresUrl } from './postgres-url'
+
+const nodeRequire = createRequire(__filename)
 
 let client: PrismaClient | undefined
 
@@ -9,7 +12,7 @@ function createClient(): PrismaClient {
   const safeUrl = safePostgresUrl(target)
   process.env.DATABASE_URL = safeUrl
   process.env.DIRECT_URL = safeUrl
-  const { PrismaPg } = require('@prisma/adapter-pg') as typeof import('@prisma/adapter-pg')
+  const { PrismaPg } = nodeRequire('@prisma/adapter-pg') as typeof import('@prisma/adapter-pg')
   const adapter = new PrismaPg({
     host: target.host,
     port: target.port,

@@ -21,14 +21,28 @@ function restoreApiPrefix(req: IncomingMessage): void {
   const url = req.url ?? '/'
   const queryIndex = url.indexOf('?')
   const pathOnly = queryIndex === -1 ? url : url.slice(0, queryIndex)
-  const query = queryIndex === -1 ? '' : url.slice(queryIndex)
+  const queryString = queryIndex === -1 ? '' : url.slice(queryIndex + 1)
+  const params = new URLSearchParams(queryString)
+  const forwarded = params.get('cmh_path')
+  if (forwarded) {
+    params.delete('cmh_path')
+    const rest = params.toString()
+    const suffix = forwarded.replace(/^\/+/, '')
+    req.url = `/api/${suffix}${rest ? `?${rest}` : ''}`
+    return
+  }
   if (pathOnly === '/api' || pathOnly.startsWith('/api/')) return
   const suffix = pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`
-  req.url = `/api${suffix}${query}`
+  req.url = `/api${suffix}${queryString ? `?${queryString}` : ''}`
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   restoreApiPrefix(req)
+  const pathOnly = (req.url ?? '/').split('?')[0]
+  if (pathOnly === '/api/health') {
+    app(req, res)
+    return
+  }
   try {
     await prepare()
   } catch (error: unknown) {
