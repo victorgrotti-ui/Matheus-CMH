@@ -1,4 +1,0 @@
-{
-  "buildCommand": "node scripts/vercel-build.mjs",
-  "outputDirectory": "client/dist"
-}
