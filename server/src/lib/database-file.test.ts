@@ -71,6 +71,16 @@ describe('postgres connection string', () => {
     assert.equal(safePostgresUrl(chosen).includes('super-secret-value'), false)
   })
 
+  it('uses the pooler URL when Vercel is serving the site', () => {
+    const env: NodeJS.ProcessEnv = {
+      VERCEL: '1',
+      DATABASE_URL: 'postgresql://postgres.example:secret@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
+      DIRECT_URL: 'postgresql://postgres.example:secret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
+    }
+    const chosen = postgresTargetForClient(env)
+    assert.equal(chosen.port, 6543)
+  })
+
   it('removes a connection string from a log message', () => {
     const message = redactConnectionStrings('P1013 invalid domain character postgresql://postgres.example:secret@host:5432/postgres')
     assert.equal(message.includes('secret'), false)

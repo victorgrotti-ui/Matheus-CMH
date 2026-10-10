@@ -13,12 +13,21 @@ afterEach(() => {
 describe('session cookie', () => {
   it('stays usable on an internal HTTP address unless HTTPS is requested', () => {
     delete process.env.COOKIE_SECURE
+    delete process.env.VERCEL
     assert.equal(cookieOptions().secure, false)
     assert.equal(cookieOptions().httpOnly, true)
     assert.equal(clearCookieOptions().secure, false)
     process.env.COOKIE_SECURE = 'true'
     assert.equal(cookieOptions().secure, true)
     assert.equal(clearCookieOptions().secure, true)
+  })
+
+  it('uses a secure cookie on Vercel without changing the office setting', () => {
+    delete process.env.COOKIE_SECURE
+    process.env.VERCEL = '1'
+    assert.equal(cookieOptions().secure, true)
+    delete process.env.VERCEL
+    assert.equal(cookieOptions().secure, false)
   })
 })
 

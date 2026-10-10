@@ -40,7 +40,7 @@ export function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: process.env.COOKIE_SECURE === 'true',
+    secure: process.env.COOKIE_SECURE === 'true' || process.env.VERCEL === '1',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   }

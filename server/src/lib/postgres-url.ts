@@ -104,13 +104,22 @@ export function postgresTargetFromUrl(raw: string, name: string): PostgresTarget
   }
 }
 
-/** Prefer the direct URL that already applied the migration. */
+/**
+ * Office uses the direct connection. Vercel uses the pooler so each
+ * short-lived function does not hold a direct database session.
+ */
 export function postgresTargetForClient(env: NodeJS.ProcessEnv = process.env): PostgresTarget {
   const errors: string[] = []
-  const candidates: Array<[string, string | undefined]> = [
-    ['DIRECT_URL', env.DIRECT_URL],
-    ['DATABASE_URL', env.DATABASE_URL],
-  ]
+  const serverless = env.VERCEL === '1'
+  const candidates: Array<[string, string | undefined]> = serverless
+    ? [
+        ['DATABASE_URL', env.DATABASE_URL],
+        ['DIRECT_URL', env.DIRECT_URL],
+      ]
+    : [
+        ['DIRECT_URL', env.DIRECT_URL],
+        ['DATABASE_URL', env.DATABASE_URL],
+      ]
   for (const [name, value] of candidates) {
     if (!value) continue
     try {
