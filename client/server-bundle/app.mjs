@@ -31081,7 +31081,8 @@ function postgresTargetForClient(env = process.env) {
       errors.push(error instanceof Error ? error.message : `${name} is invalid.`);
     }
   }
-  throw new Error(errors[0] ?? "Set DATABASE_URL and DIRECT_URL in .env. The values were not printed.");
+  const where = env.VERCEL === "1" ? "the Vercel project settings" : ".env";
+  throw new Error(errors[0] ?? `Set DATABASE_URL and DIRECT_URL in ${where}. The values were not printed.`);
 }
 function safePostgresUrl(target) {
   const user = encodeURIComponent(target.user);

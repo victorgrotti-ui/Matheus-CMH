@@ -128,7 +128,8 @@ export function postgresTargetForClient(env: NodeJS.ProcessEnv = process.env): P
       errors.push(error instanceof Error ? error.message : `${name} is invalid.`)
     }
   }
-  throw new Error(errors[0] ?? 'Set DATABASE_URL and DIRECT_URL in .env. The values were not printed.')
+  const where = env.VERCEL === '1' ? 'the Vercel project settings' : '.env'
+  throw new Error(errors[0] ?? `Set DATABASE_URL and DIRECT_URL in ${where}. The values were not printed.`)
 }
 
 /** A URL Prisma can parse. The password is encoded so it cannot become part of the host. */
