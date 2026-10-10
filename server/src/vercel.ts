@@ -17,7 +17,18 @@ function prepare(): Promise<void> {
   return ready
 }
 
+function restoreApiPrefix(req: IncomingMessage): void {
+  const url = req.url ?? '/'
+  const queryIndex = url.indexOf('?')
+  const pathOnly = queryIndex === -1 ? url : url.slice(0, queryIndex)
+  const query = queryIndex === -1 ? '' : url.slice(queryIndex)
+  if (pathOnly === '/api' || pathOnly.startsWith('/api/')) return
+  const suffix = pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`
+  req.url = `/api${suffix}${query}`
+}
+
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  restoreApiPrefix(req)
   try {
     await prepare()
   } catch (error: unknown) {

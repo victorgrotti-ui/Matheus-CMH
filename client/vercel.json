@@ -1,0 +1,5 @@
+{
+  "installCommand": "cd .. && npm ci --include=dev",
+  "buildCommand": "cd .. && node scripts/vercel-build.mjs",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

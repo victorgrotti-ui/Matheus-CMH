@@ -11,4 +11,4 @@ if (process.env.DIRECT_URL) {
 } else {
   console.log('DIRECT_URL is not set. Migrations were skipped. No database rows were changed.')
 }
-run('npm', ['run', 'build'])
+run('npm', ['run', 'build', '-w', 'client'])
