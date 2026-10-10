@@ -34,7 +34,7 @@ export default async function handler(req: IncomingMessage, res?: ServerResponse
       send(res, 200, { ok: true, service: 'CMH Cleaning Management System' })
       return
     }
-    const loaded = await import('./app.mjs')
+    const loaded = await import('../server-bundle/app.mjs')
     await loaded.default(req, res)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'The API failed to start.'

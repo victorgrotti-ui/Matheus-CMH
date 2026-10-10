@@ -14,7 +14,7 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
-  outfile: 'client/api/app.mjs',
+  outfile: 'client/server-bundle/app.mjs',
   external: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
   banner: {
     js: [
@@ -31,7 +31,7 @@ console.log('Bundled the API for Vercel. No database rows were changed.')
 copyRuntimeModules()
 
 function copyRuntimeModules() {
-  const destination = 'client/api/node_modules'
+  const destination = 'client/server-bundle/node_modules'
   rmSync(destination, { recursive: true, force: true })
   const seen = new Set()
   for (const name of ['@prisma/client', '.prisma', '@prisma/adapter-pg', 'pg']) {
@@ -62,7 +62,7 @@ function copyPackage(source, destination, seen) {
   for (const dependency of Object.keys(manifest.dependencies ?? {})) {
     const installed = findInstalled(dependency)
     if (!installed) continue
-    copyPackage(installed, join('client/api/node_modules', dependency), seen)
+    copyPackage(installed, join('client/server-bundle/node_modules', dependency), seen)
   }
 }
 if (process.env.DIRECT_URL) {
