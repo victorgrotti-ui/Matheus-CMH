@@ -12,7 +12,7 @@
     "build": "npm run build -w server && npm run build -w client",
     "start": "npm run start -w server",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
-    "test": "tsx --test server/src/lib/finance.test.ts server/src/lib/auth.test.ts server/src/lib/user-migration.test.ts server/src/lib/office-network.test.ts server/src/lib/database-file.test.ts server/src/lib/office-setup.test.ts client/src/i18n/parity.test.ts",
+    "test": "tsx --test server/src/lib/finance.test.ts server/src/lib/auth.test.ts server/src/lib/admin-auth-report.test.ts server/src/lib/user-migration.test.ts server/src/lib/office-network.test.ts server/src/lib/database-file.test.ts server/src/lib/office-setup.test.ts client/src/i18n/parity.test.ts",
     "test:integration": "tsx server/src/integration.test.ts && tsx server/src/lib/import-sqlite.integration.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
