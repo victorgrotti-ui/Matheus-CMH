@@ -1,6 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import { createApp } from './app'
-import { adminAuthReport } from './lib/admin-auth-report'
 import { ensureBootstrapAdmin } from './lib/bootstrap-admin'
 import { redactConnectionStrings } from './lib/postgres-url'
 import { ensureSettings } from './lib/settings'
@@ -42,21 +41,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const pathOnly = (req.url ?? '/').split('?')[0]
   if (pathOnly === '/api/health') {
     app(req, res)
-    return
-  }
-  if (pathOnly === '/api/health/auth') {
-    try {
-      const report = await adminAuthReport()
-      res.statusCode = 200
-      res.setHeader('content-type', 'application/json; charset=utf-8')
-      res.setHeader('cache-control', 'no-store')
-      res.end(JSON.stringify(report))
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'The administrator check failed.'
-      res.statusCode = 503
-      res.setHeader('content-type', 'application/json; charset=utf-8')
-      res.end(JSON.stringify({ error: redactConnectionStrings(message).replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, '[redacted-email]') }))
-    }
     return
   }
   try {

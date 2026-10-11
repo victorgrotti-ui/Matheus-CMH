@@ -43319,82 +43319,6 @@ function createApp() {
   return app2;
 }
 
-// server/src/lib/admin-auth-report.ts
-function blankAccount() {
-  return {
-    exists: false,
-    roleAdmin: false,
-    active: false,
-    nameIsMatheus: false,
-    nameContainsMatheus: false,
-    passwordMatches: false,
-    sessionRoundTrip: false
-  };
-}
-async function accountStatus(account, password, jwtReady) {
-  if (!account) return blankAccount();
-  const normalizedName = account.name.trim().toLowerCase();
-  let passwordMatches = false;
-  let sessionRoundTrip = false;
-  if (password) passwordMatches = await verifyPassword(password, account.passwordHash);
-  if (jwtReady) {
-    const token = signToken({ id: account.id, role: account.role, tokenVersion: account.tokenVersion });
-    const payload = readToken(token);
-    sessionRoundTrip = payload?.sub === account.id && payload.role === account.role && payload.ver === account.tokenVersion;
-  }
-  return {
-    exists: true,
-    roleAdmin: account.role === "ADMIN",
-    active: account.active,
-    nameIsMatheus: normalizedName === "matheus",
-    nameContainsMatheus: normalizedName.includes("matheus"),
-    passwordMatches,
-    sessionRoundTrip
-  };
-}
-async function adminAuthReport(env = process.env, findAccounts = async (email) => {
-  const rows = await prisma.user.findMany({
-    where: {
-      OR: [...email ? [{ email }] : [], { name: { contains: "matheus", mode: "insensitive" } }]
-    },
-    select: { id: true, email: true, name: true, role: true, active: true, tokenVersion: true, passwordHash: true }
-  });
-  return rows;
-}) {
-  const email = env.ADMIN_EMAIL?.trim().toLowerCase() ?? "";
-  const name2 = env.ADMIN_NAME?.trim() ?? "";
-  const password = env.ADMIN_PASSWORD ?? "";
-  const jwtSecret = env.JWT_SECRET ?? "";
-  const previousSecret = process.env.JWT_SECRET;
-  const previousVercel = process.env.VERCEL;
-  process.env.JWT_SECRET = jwtSecret;
-  process.env.VERCEL = env.VERCEL;
-  try {
-    const accounts = await findAccounts(email);
-    const jwtReady = jwtSecret.length >= 16 && !jwtSecret.toLowerCase().includes("replace-with");
-    const configured = email ? accounts.find((account) => account.email.toLowerCase() === email) ?? null : null;
-    const cookie = cookieOptions();
-    return {
-      adminNameSet: name2.length > 0,
-      adminEmailSet: email.length > 0,
-      adminPasswordSet: password.length > 0,
-      adminEmailValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-      adminPasswordLengthOk: password.length >= 8 && password.length <= 72,
-      adminPasswordHasOuterSpace: password.length > 0 && password !== password.trim(),
-      configuredNameIsMatheus: name2.toLowerCase() === "matheus",
-      jwtConfigured: jwtReady,
-      cookie: { httpOnly: cookie.httpOnly, secure: cookie.secure, sameSite: cookie.sameSite, path: cookie.path },
-      configuredAccount: await accountStatus(configured, password, jwtReady),
-      matheusAccountCount: accounts.filter((account) => account.name.toLowerCase().includes("matheus")).length
-    };
-  } finally {
-    if (previousSecret === void 0) delete process.env.JWT_SECRET;
-    else process.env.JWT_SECRET = previousSecret;
-    if (previousVercel === void 0) delete process.env.VERCEL;
-    else process.env.VERCEL = previousVercel;
-  }
-}
-
 // server/src/lib/bootstrap-admin.ts
 async function ensureBootstrapAdmin() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? "";
@@ -43453,21 +43377,6 @@ async function handler(req, res) {
   const pathOnly = (req.url ?? "/").split("?")[0];
   if (pathOnly === "/api/health") {
     app(req, res);
-    return;
-  }
-  if (pathOnly === "/api/health/auth") {
-    try {
-      const report = await adminAuthReport();
-      res.statusCode = 200;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.setHeader("cache-control", "no-store");
-      res.end(JSON.stringify(report));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "The administrator check failed.";
-      res.statusCode = 503;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ error: redactConnectionStrings(message).replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[redacted-email]") }));
-    }
     return;
   }
   try {
