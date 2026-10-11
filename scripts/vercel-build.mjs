@@ -15,7 +15,7 @@ await build({
   format: 'esm',
   target: 'node22',
   outfile: 'client/server-bundle/app.mjs',
-  external: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
+  external: ['@prisma/client', 'pg-native'],
   banner: {
     js: [
       "import { createRequire as __cmhCreateRequire } from 'node:module';",
@@ -27,8 +27,17 @@ await build({
     ].join('\n'),
   },
 })
-console.log('Bundled the API for Vercel. No database rows were changed.')
+assertDriverIsBundled()
+console.log('Bundled the API for Vercel. The PostgreSQL driver is inside the bundle. No database rows were changed.')
 copyRuntimeModules()
+
+function assertDriverIsBundled() {
+  const bundled = readFileSync('client/server-bundle/app.mjs', 'utf8')
+  const excluded = bundled.match(/from ["'](?:@prisma\/adapter-pg|pg)["']|require\(["'](?:@prisma\/adapter-pg|pg)["']\)/)
+  if (excluded) {
+    throw new Error('The PostgreSQL driver was left out of the API bundle.')
+  }
+}
 
 function copyRuntimeModules() {
   const destination = 'client/server-bundle/node_modules'

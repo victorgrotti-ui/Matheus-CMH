@@ -28,7 +28,7 @@
     "admin:reset-password": "tsx server/src/scripts/reset-password.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.2",
+    "@prisma/client": "6.19.3",
     "dotenv": "^16.6.1"
   },
   "devDependencies": {
@@ -36,7 +36,7 @@
     "@types/supertest": "^6.0.3",
     "concurrently": "^9.2.1",
     "esbuild": "^0.25.10",
-    "prisma": "^6.16.2",
+    "prisma": "6.19.3",
     "supertest": "^7.1.4",
     "tsx": "^4.20.5"
   },
