@@ -59,7 +59,7 @@ expensesRouter.get(
     if (req.query.reimbursable === 'true') where.reimbursable = true
     if (req.query.reimbursable === 'false') where.reimbursable = false
     if (typeof req.query.search === 'string' && req.query.search.trim()) {
-      where.description = { contains: req.query.search.trim() }
+      where.description = { contains: req.query.search.trim(), mode: 'insensitive' }
     }
     const expenses = await prisma.expense.findMany({
       where,

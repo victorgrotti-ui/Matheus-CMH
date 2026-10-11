@@ -47,10 +47,10 @@ servicesRouter.get(
       where.serviceType = req.query.serviceType as Prisma.ServiceWhereInput['serviceType']
     }
     if (typeof req.query.client === 'string' && req.query.client.trim()) {
-      where.clientName = { contains: req.query.client.trim() }
+      where.clientName = { contains: req.query.client.trim(), mode: 'insensitive' }
     }
     if (typeof req.query.search === 'string' && req.query.search.trim()) {
-      where.propertyAddress = { contains: req.query.search.trim() }
+      where.propertyAddress = { contains: req.query.search.trim(), mode: 'insensitive' }
     }
 
     const services = await prisma.service.findMany({
