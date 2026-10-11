@@ -132,6 +132,48 @@ export function postgresTargetForClient(env: NodeJS.ProcessEnv = process.env): P
   throw new Error(errors[0] ?? `Set DATABASE_URL and DIRECT_URL in ${where}. The values were not printed.`)
 }
 
+function inspectConnection(value: string | undefined): {
+  set: boolean
+  valid: boolean
+  supabase: boolean
+  port: number | null
+  database: string | null
+  host: string | null
+  user: string | null
+} {
+  if (!value) return { set: false, valid: false, supabase: false, port: null, database: null, host: null, user: null }
+  try {
+    const target = postgresTargetFromUrl(value, 'connection')
+    const supabase = target.host === 'db.supabase.co' || target.host.endsWith('.supabase.co') || target.host.endsWith('.pooler.supabase.com')
+    return { set: true, valid: true, supabase, port: target.port, database: target.database, host: target.host, user: target.user }
+  } catch {
+    return { set: true, valid: false, supabase: false, port: null, database: null, host: null, user: null }
+  }
+}
+
+/** Facts about the configured database. The host, user and password are not included. */
+export function publicConnectionReport(env: NodeJS.ProcessEnv = process.env) {
+  const databaseUrl = inspectConnection(env.DATABASE_URL)
+  const directUrl = inspectConnection(env.DIRECT_URL)
+  let runtimeSource: 'DATABASE_URL' | 'DIRECT_URL' | null = null
+  try {
+    const chosen = postgresTargetForClient(env)
+    if (databaseUrl.host === chosen.host && databaseUrl.port === chosen.port && databaseUrl.user === chosen.user) runtimeSource = 'DATABASE_URL'
+    else if (directUrl.host === chosen.host && directUrl.port === chosen.port && directUrl.user === chosen.user) runtimeSource = 'DIRECT_URL'
+  } catch {
+    runtimeSource = null
+  }
+  return {
+    engine: 'postgresql' as const,
+    sqlite: false,
+    databaseUrl: { set: databaseUrl.set, valid: databaseUrl.valid, supabase: databaseUrl.supabase, port: databaseUrl.port, database: databaseUrl.database },
+    directUrl: { set: directUrl.set, valid: directUrl.valid, supabase: directUrl.supabase, port: directUrl.port, database: directUrl.database },
+    sameHost: databaseUrl.host !== null && databaseUrl.host === directUrl.host,
+    sameUser: databaseUrl.user !== null && databaseUrl.user === directUrl.user,
+    runtimeSource,
+  }
+}
+
 /** A URL Prisma can parse. The password is encoded so it cannot become part of the host. */
 export function safePostgresUrl(target: PostgresTarget): string {
   const user = encodeURIComponent(target.user)

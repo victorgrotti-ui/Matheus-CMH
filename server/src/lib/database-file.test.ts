@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { isDevelopmentDatabaseFile, isPostgresUrl } from './database-file'
-import { postgresTargetForClient, postgresTargetFromUrl, redactConnectionStrings, safePostgresUrl } from './postgres-url'
+import { postgresTargetForClient, postgresTargetFromUrl, publicConnectionReport, redactConnectionStrings, safePostgresUrl } from './postgres-url'
 
 describe('database file', () => {
   it('recognises the development database and not the office database', () => {
@@ -79,6 +79,26 @@ describe('postgres connection string', () => {
     }
     const chosen = postgresTargetForClient(env)
     assert.equal(chosen.port, 6543)
+  })
+
+  it('reports Supabase without the user or password', () => {
+    const report = publicConnectionReport({
+      VERCEL: '1',
+      DATABASE_URL: 'postgresql://postgres.projectref:super-secret-value@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
+      DIRECT_URL: 'postgresql://postgres.projectref:super-secret-value@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
+    })
+    const text = JSON.stringify(report)
+    assert.equal(text.includes('super-secret-value'), false)
+    assert.equal(text.includes('projectref'), false)
+    assert.equal(text.includes('pooler.supabase.com'), false)
+    assert.equal(report.sqlite, false)
+    assert.equal(report.databaseUrl.supabase, true)
+    assert.equal(report.databaseUrl.port, 6543)
+    assert.equal(report.directUrl.supabase, true)
+    assert.equal(report.directUrl.port, 5432)
+    assert.equal(report.sameHost, true)
+    assert.equal(report.sameUser, true)
+    assert.equal(report.runtimeSource, 'DATABASE_URL')
   })
 
   it('removes a connection string from a log message', () => {
