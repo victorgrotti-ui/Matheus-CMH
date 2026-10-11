@@ -21,14 +21,16 @@ export type AdminAuthReport = {
   configuredNameIsMatheus: boolean
   jwtConfigured: boolean
   cookie: { httpOnly: boolean; secure: boolean; sameSite: 'lax'; path: string }
-  matheus: {
+  configuredAccount: {
     exists: boolean
     roleAdmin: boolean
     active: boolean
-    sameEmailAsAdminEnv: boolean
+    nameIsMatheus: boolean
+    nameContainsMatheus: boolean
     passwordMatches: boolean
     sessionRoundTrip: boolean
   }
+  matheusAccountCount: number
 }
 
 function blankAccount() {
@@ -36,9 +38,32 @@ function blankAccount() {
     exists: false,
     roleAdmin: false,
     active: false,
-    sameEmailAsAdminEnv: false,
+    nameIsMatheus: false,
+    nameContainsMatheus: false,
     passwordMatches: false,
     sessionRoundTrip: false,
+  }
+}
+
+async function accountStatus(account: AccountRow | null, password: string, jwtReady: boolean) {
+  if (!account) return blankAccount()
+  const normalizedName = account.name.trim().toLowerCase()
+  let passwordMatches = false
+  let sessionRoundTrip = false
+  if (password) passwordMatches = await verifyPassword(password, account.passwordHash)
+  if (jwtReady) {
+    const token = signToken({ id: account.id, role: account.role, tokenVersion: account.tokenVersion })
+    const payload = readToken(token)
+    sessionRoundTrip = payload?.sub === account.id && payload.role === account.role && payload.ver === account.tokenVersion
+  }
+  return {
+    exists: true,
+    roleAdmin: account.role === 'ADMIN',
+    active: account.active,
+    nameIsMatheus: normalizedName === 'matheus',
+    nameContainsMatheus: normalizedName.includes('matheus'),
+    passwordMatches,
+    sessionRoundTrip,
   }
 }
 
@@ -47,7 +72,7 @@ export async function adminAuthReport(
   findAccounts: (email: string) => Promise<AccountRow[]> = async (email) => {
     const rows = await prisma.user.findMany({
       where: {
-        OR: [{ email }, { name: { equals: 'Matheus', mode: 'insensitive' } }],
+        OR: [...(email ? [{ email }] : []), { name: { contains: 'matheus', mode: 'insensitive' } }],
       },
       select: { id: true, email: true, name: true, role: true, active: true, tokenVersion: true, passwordHash: true },
     })
@@ -64,18 +89,9 @@ export async function adminAuthReport(
   process.env.VERCEL = env.VERCEL
   try {
     const accounts = await findAccounts(email)
-    const matheus = accounts.find((account) => account.name.trim().toLowerCase() === 'matheus') ?? null
+    const jwtReady = jwtSecret.length >= 16 && !jwtSecret.toLowerCase().includes('replace-with')
+    const configured = email ? accounts.find((account) => account.email.toLowerCase() === email) ?? null : null
     const cookie = cookieOptions()
-    let passwordMatches = false
-    let sessionRoundTrip = false
-    if (matheus && password) {
-      passwordMatches = await verifyPassword(password, matheus.passwordHash)
-    }
-    if (matheus && jwtSecret.length >= 16 && !jwtSecret.toLowerCase().includes('replace-with')) {
-      const token = signToken({ id: matheus.id, role: matheus.role, tokenVersion: matheus.tokenVersion })
-      const payload = readToken(token)
-      sessionRoundTrip = payload?.sub === matheus.id && payload.role === matheus.role && payload.ver === matheus.tokenVersion
-    }
     return {
       adminNameSet: name.length > 0,
       adminEmailSet: email.length > 0,
@@ -84,18 +100,10 @@ export async function adminAuthReport(
       adminPasswordLengthOk: password.length >= 8 && password.length <= 72,
       adminPasswordHasOuterSpace: password.length > 0 && password !== password.trim(),
       configuredNameIsMatheus: name.toLowerCase() === 'matheus',
-      jwtConfigured: jwtSecret.length >= 16 && !jwtSecret.toLowerCase().includes('replace-with'),
+      jwtConfigured: jwtReady,
       cookie: { httpOnly: cookie.httpOnly, secure: cookie.secure, sameSite: cookie.sameSite, path: cookie.path },
-      matheus: matheus
-        ? {
-            exists: true,
-            roleAdmin: matheus.role === 'ADMIN',
-            active: matheus.active,
-            sameEmailAsAdminEnv: matheus.email.toLowerCase() === email,
-            passwordMatches,
-            sessionRoundTrip,
-          }
-        : blankAccount(),
+      configuredAccount: await accountStatus(configured, password, jwtReady),
+      matheusAccountCount: accounts.filter((account) => account.name.toLowerCase().includes('matheus')).length,
     }
   } finally {
     if (previousSecret === undefined) delete process.env.JWT_SECRET
