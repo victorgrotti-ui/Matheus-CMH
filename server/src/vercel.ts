@@ -1,8 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import { createApp } from './app'
 import { ensureBootstrapAdmin } from './lib/bootstrap-admin'
-import { prisma } from './lib/prisma'
-import { publicConnectionReport, redactConnectionStrings } from './lib/postgres-url'
+import { redactConnectionStrings } from './lib/postgres-url'
 import { ensureSettings } from './lib/settings'
 
 const app = createApp()
@@ -42,26 +41,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const pathOnly = (req.url ?? '/').split('?')[0]
   if (pathOnly === '/api/health') {
     app(req, res)
-    return
-  }
-  if (pathOnly === '/api/health/database') {
-    try {
-      const report = publicConnectionReport()
-      const [employees, services, payments, expenses] = await Promise.all([
-        prisma.employee.count(),
-        prisma.service.count(),
-        prisma.payment.count(),
-        prisma.expense.count(),
-      ])
-      res.statusCode = 200
-      res.setHeader('content-type', 'application/json; charset=utf-8')
-      res.end(JSON.stringify({ ...report, counts: { employees, services, payments, expenses } }))
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'The company database is not available.'
-      res.statusCode = 503
-      res.setHeader('content-type', 'application/json; charset=utf-8')
-      res.end(JSON.stringify({ error: redactConnectionStrings(message) }))
-    }
     return
   }
   try {

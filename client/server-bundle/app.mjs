@@ -37221,37 +37221,6 @@ function postgresTargetForClient(env = process.env) {
   const where = env.VERCEL === "1" ? "the Vercel project settings" : ".env";
   throw new Error(errors[0] ?? `Set DATABASE_URL and DIRECT_URL in ${where}. The values were not printed.`);
 }
-function inspectConnection(value) {
-  if (!value) return { set: false, valid: false, supabase: false, port: null, database: null, host: null, user: null };
-  try {
-    const target = postgresTargetFromUrl(value, "connection");
-    const supabase = target.host === "db.supabase.co" || target.host.endsWith(".supabase.co") || target.host.endsWith(".pooler.supabase.com");
-    return { set: true, valid: true, supabase, port: target.port, database: target.database, host: target.host, user: target.user };
-  } catch {
-    return { set: true, valid: false, supabase: false, port: null, database: null, host: null, user: null };
-  }
-}
-function publicConnectionReport(env = process.env) {
-  const databaseUrl = inspectConnection(env.DATABASE_URL);
-  const directUrl = inspectConnection(env.DIRECT_URL);
-  let runtimeSource = null;
-  try {
-    const chosen = postgresTargetForClient(env);
-    if (databaseUrl.host === chosen.host && databaseUrl.port === chosen.port && databaseUrl.user === chosen.user) runtimeSource = "DATABASE_URL";
-    else if (directUrl.host === chosen.host && directUrl.port === chosen.port && directUrl.user === chosen.user) runtimeSource = "DIRECT_URL";
-  } catch {
-    runtimeSource = null;
-  }
-  return {
-    engine: "postgresql",
-    sqlite: false,
-    databaseUrl: { set: databaseUrl.set, valid: databaseUrl.valid, supabase: databaseUrl.supabase, port: databaseUrl.port, database: databaseUrl.database },
-    directUrl: { set: directUrl.set, valid: directUrl.valid, supabase: directUrl.supabase, port: directUrl.port, database: directUrl.database },
-    sameHost: databaseUrl.host !== null && databaseUrl.host === directUrl.host,
-    sameUser: databaseUrl.user !== null && databaseUrl.user === directUrl.user,
-    runtimeSource
-  };
-}
 function safePostgresUrl(target) {
   const user = encodeURIComponent(target.user);
   const password = encodeURIComponent(target.password);
@@ -43408,26 +43377,6 @@ async function handler(req, res) {
   const pathOnly = (req.url ?? "/").split("?")[0];
   if (pathOnly === "/api/health") {
     app(req, res);
-    return;
-  }
-  if (pathOnly === "/api/health/database") {
-    try {
-      const report = publicConnectionReport();
-      const [employees, services, payments, expenses] = await Promise.all([
-        prisma.employee.count(),
-        prisma.service.count(),
-        prisma.payment.count(),
-        prisma.expense.count()
-      ]);
-      res.statusCode = 200;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ ...report, counts: { employees, services, payments, expenses } }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "The company database is not available.";
-      res.statusCode = 503;
-      res.setHeader("content-type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ error: redactConnectionStrings(message) }));
-    }
     return;
   }
   try {
