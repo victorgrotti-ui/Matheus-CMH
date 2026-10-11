@@ -28,7 +28,8 @@ function webResponse(status: number, body: unknown): Response {
 export default async function handler(req: IncomingMessage, res?: ServerResponse): Promise<void | Response> {
   try {
     if (!res || typeof res.setHeader !== 'function' || typeof res.end !== 'function') {
-      return webResponse(200, { ok: true, service: 'CMH Cleaning Management System' })
+      if (isHealth(req)) return webResponse(200, { ok: true, service: 'CMH Cleaning Management System' })
+      return webResponse(503, { error: 'The API failed to start.' })
     }
     if (isHealth(req)) {
       send(res, 200, { ok: true, service: 'CMH Cleaning Management System' })

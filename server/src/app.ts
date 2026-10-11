@@ -15,6 +15,7 @@ import { reportsRouter } from './routes/reports'
 import { servicesRouter } from './routes/services'
 import { settingsRouter } from './routes/settings'
 import { usersRouter } from './routes/users'
+import { proveRolledBackWrites } from './lib/write-proof'
 import './types'
 
 export function createApp() {
@@ -32,6 +33,14 @@ export function createApp() {
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'CMH Cleaning Management System' })
+  })
+
+  app.get('/api/health/write-proof', (_req, res, next) => {
+    proveRolledBackWrites()
+      .then((report) => {
+        res.json(report)
+      })
+      .catch(next)
   })
 
   app.use('/api/auth', authRouter)
