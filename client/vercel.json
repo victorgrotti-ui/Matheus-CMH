@@ -1,7 +1,7 @@
 {
   "installCommand": "cd .. && npm ci --include=dev",
   "buildCommand": "cd .. && node scripts/vercel-build.mjs",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../server ../prisma ../scripts ../package.json ../package-lock.json",
+  "ignoreCommand": "exit 1",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api?cmh_path=:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
